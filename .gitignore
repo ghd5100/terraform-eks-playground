@@ -56,3 +56,6 @@ terraform.rc
 *.log
 *.bak
 *.tmp
+
+
+.terraform.lock.hcl
