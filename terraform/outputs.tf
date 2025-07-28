@@ -38,12 +38,30 @@ output "kubeconfig" {
   value = local_file.kubeconfig.content
 }
 
-
-output "instance_profile_name" {
-  value = aws_iam_instance_profile.eks_instance_profile.name
-}
-
 output "eks_node_role_arn" {
   description = "EKS 워커 노드 IAM Role ARN"
   value       = aws_iam_role.eks_node_role.arn
+}
+
+output "eks_instance_profile_name" {
+  description = "EKS 워커 노드 인스턴스 프로파일 이름"
+  value       = aws_iam_instance_profile.eks_instance_profile.name
+}
+
+output "launch_template_id" {
+  description = "EKS 노드용 Launch Template ID"
+  value       = aws_launch_template.eks_node_lt.id
+}
+
+output "ssm_automation_role_arn" {
+  value = aws_iam_role.ssm_automation_role.arn
+}
+
+
+output "ssm_doc_name" {
+  value = aws_ssm_document.my_automation_doc.name
+}
+
+output "eks_instance_ids" {
+  value = local.eks_instance_ids
 }

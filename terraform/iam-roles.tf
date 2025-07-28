@@ -16,6 +16,28 @@ resource "aws_iam_role" "eks_node_role" {
   })
 }
 
+
+resource "aws_iam_role_policy_attachment" "ssm_automation_attachment" {
+  role       = aws_iam_role.ssm_automation_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess" # AWS 관리형 정책 중 하나
+}
+
+
+resource "aws_iam_role_policy_attachment" "ssm_managed_policy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  depends_on = [aws_iam_role.eks_node_role]
+}
+
+
+resource "aws_iam_role_policy_attachment" "attach_ssm_policy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+
+
+
 resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
   role       = aws_iam_role.eks_node_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
@@ -31,14 +53,11 @@ resource "aws_iam_role_policy_attachment" "ec2_container_registry_readonly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-resource "aws_iam_role_policy_attachment" "ssm_managed_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
 
 # 인스턴스 프로파일
 resource "aws_iam_instance_profile" "eks_instance_profile" {
   name = "eks-node-instance-profile"
   role = aws_iam_role.eks_node_role.name
 }
+
 

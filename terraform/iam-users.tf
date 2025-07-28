@@ -1,6 +1,14 @@
 
+# resource "aws_iam_user" "admin_user" {
+#   name = "admin"
+# }
+# resource "aws_iam_user" "admin" {
+#   name = "admin"
+# }
+
+
 resource "aws_iam_user" "admin_user" {
-  name = "admin"
+  name = "admin-new" # or "dev-admin"
 }
 
 resource "aws_iam_user_policy_attachment" "admin_user_attach" {
@@ -12,4 +20,6 @@ resource "aws_iam_user_login_profile" "admin_login_profile" {
   user = aws_iam_user.admin_user.name
   depends_on = [aws_iam_user.admin_user]
 }
+
+
 

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "0.3",
+  "description": "Stop an EC2 instance via automation",
+  "parameters": {
+    "InstanceId": {
+      "type": "String",
+      "description": "(Required) EC2 Instance ID"
+    },
+    "AutomationAssumeRole": {
+      "type": "String",
+      "description": "(Required) IAM Role ARN for Automation"
+    }
+  },
+  "mainSteps": [
+    {
+      "name": "stopInstance",
+      "action": "aws:changeInstanceState",
+      "inputs": {
+        "InstanceIds": ["{{ InstanceId }}"],
+        "DesiredState": "stopped"
+      }
+    }
+  ]
+}
