@@ -62,6 +62,6 @@ output "ssm_doc_name" {
   value = aws_ssm_document.my_automation_doc.name
 }
 
-output "eks_instance_ids" {
-  value = local.eks_instance_ids
-}
+# output "eks_instance_ids" {
+#   value = local.eks_instance_ids
+# }
