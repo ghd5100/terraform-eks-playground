@@ -54,10 +54,9 @@ module "ssm_endpoints" {
 }
 
 
-
 resource "aws_launch_template" "eks_node_lt" {
   name_prefix   = "eks-node-lt-"
-  image_id      = "ami-07e2cee93a3a27711"  # 직접 넣기
+  image_id      = "ami-0f8d552e06067b477"  # 직접 넣기
   instance_type = "t3.medium"
 
   user_data = base64encode(<<EOT
@@ -80,37 +79,25 @@ EOT
 
 # data "external" "eks_instance_ids" {
 #  program = ["powershell", "-File", "${path.module}/scripts/get_instance_ids.ps1"]
-#}
-#
-#locals {
-#  eks_instance_ids = split(",", data.external.eks_instance_ids.result.ids)
-#}
-
-
-
-# resource "null_resource" "start_ssm_automation" {
-#   count = length(data.aws_instances.eks_nodes.ids) > 0 ? length(data.aws_instances.eks_nodes.ids) : 0
-
-#   provisioner "local-exec" {
-#     command = "aws ssm start-automation-execution --document-name MyAutomationDocument --parameters AutomationAssumeRole=arn:aws:iam::116981781177:role/SSMAutomationRole,InstanceId=${data.aws_instances.eks_nodes.ids[count.index]} --region ap-northeast-2"
-#   }
-
-#   depends_on = [
-#     aws_ssm_document.my_automation_doc,
-#     aws_iam_role_policy_attachment.ssm_automation_role_attachment,
-#     module.eks
-#   ]
 # }
 
+# data "external" "eks_instance_ids" {
+#   program = ["bash", "${path.module}/scripts/get_instance_ids.sh"]
+# }
+
+# locals {
+#  eks_instance_ids = split(",", data.external.eks_instance_ids.result.ids)
+# }
+
+locals {
+  eks_instance_ids = data.aws_instances.eks_nodes.ids
+}
+
 resource "null_resource" "start_ssm_automation" {
-  count = 1
+  count = length(local.eks_instance_ids)
 
   provisioner "local-exec" {
-    command = <<EOT
-      for instance_id in $(aws ec2 describe-instances --filters "Name=tag:Name,Values=default" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text); do
-        aws ssm start-automation-execution --document-name MyAutomationDocument --parameters AutomationAssumeRole=arn:aws:iam::116981781177:role/SSMAutomationRole,InstanceId=$instance_id --region ap-northeast-2
-      done
-    EOT
+    command = "aws ssm start-automation-execution --document-name MyAutomationDocument --parameters AutomationAssumeRole=arn:aws:iam::116981781177:role/SSMAutomationRole,InstanceId=${local.eks_instance_ids[count.index]} --region ap-northeast-2"
   }
 
   depends_on = [
@@ -120,13 +107,35 @@ resource "null_resource" "start_ssm_automation" {
   ]
 }
 
+# resource "null_resource" "start_ssm_automation" {
+#   count = 1
+
+#   # provisioner "local-exec" {
+#   #   command = <<EOT
+#   #     for instance_id in $(aws ec2 describe-instances --filters "Name=tag:Name,Values=default" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text); do
+#   #       aws ssm start-automation-execution --document-name MyAutomationDocument --parameters AutomationAssumeRole=arn:aws:iam::116981781177:role/SSMAutomationRole,InstanceId=$instance_id --region ap-northeast-2
+#   #     done
+#   #   EOT
+#   # }
+
+#     provisioner "local-exec" {
+#     command = "bash ${path.module}/scripts/start_ssm_automation.sh"
+#   }
+
+#   depends_on = [
+#     aws_ssm_document.my_automation_doc,
+#     aws_iam_role_policy_attachment.ssm_automation_role_attachment,
+#     module.eks
+#   ]
+# }
+
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
 
   cluster_name    = var.cluster_name
-  cluster_version = var.cluster_version
+  cluster_version = "1.28"
   subnet_ids      = module.vpc.private_subnets
   vpc_id          = module.vpc.vpc_id
 
@@ -136,6 +145,8 @@ module "eks" {
       max_size       = 1
       min_size       = 1
       instance_types = ["t3.small"]
+
+    # ami_type = "CUSTOM"
 
     launch_template = {
         id      = aws_launch_template.eks_node_lt.id
@@ -154,10 +165,8 @@ module "eks" {
       Name = "eks-node-for-ssm"
     }
     }
-  }
-
+  }  
   enable_irsa = true
- 
 }
 
 

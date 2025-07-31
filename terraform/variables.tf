@@ -4,11 +4,11 @@ variable "cluster_name" {
   default = "my-eks-cluster"
 }
 
-variable "cluster_version" {
-  description = "EKS Cluster Version"
-  type        = string
-  default     = "1.27"  # 기본값 지정 가능
-}
+# variable "cluster_version" {
+#   description = "EKS Cluster Version"
+#   type        = string
+#   default     = "1.28"  # 기본값 지정 가능
+# }
 
 variable "subnet_ids" {
   description = "EKS 클러스터가 사용할 서브넷 ID 리스트"
