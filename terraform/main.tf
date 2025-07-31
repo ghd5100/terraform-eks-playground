@@ -57,7 +57,7 @@ module "ssm_endpoints" {
 
 resource "aws_launch_template" "eks_node_lt" {
   name_prefix   = "eks-node-lt-"
-  image_id      = "ami-0d3144164828d1a0a"  # 직접 넣기
+  image_id      = "ami-07e2cee93a3a27711"  # 직접 넣기
   instance_type = "t3.medium"
 
   user_data = base64encode(<<EOT
