@@ -278,51 +278,51 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-resource "aws_instance" "openvpn_ec2" {
-  ami           = "ami-05dbfca09fc71c807"                             # data.aws_ami.amazon_linux_2.id
-  instance_type = "t3.micro"
-  subnet_id     = module.vpc.public_subnets[0]
-  key_name      = "first-keypair" # SSH 접속용 키페어 이름
+# resource "aws_instance" "openvpn_ec2" {
+#   ami           = "ami-05dbfca09fc71c807"                             # data.aws_ami.amazon_linux_2.id
+#   instance_type = "t3.micro"
+#   subnet_id     = module.vpc.public_subnets[0]
+#   key_name      = "first-keypair" # SSH 접속용 키페어 이름
 
-  associate_public_ip_address = true
+#   associate_public_ip_address = true
 
-  vpc_security_group_ids = [aws_security_group.openvpn_sg.id]
+#   vpc_security_group_ids = [aws_security_group.openvpn_sg.id]
 
-  tags = {
-    Name = "OpenVPN-Server"
-  }
+#   tags = {
+#     Name = "OpenVPN-Server"
+#   }
 
-  user_data = file("./scripts/install_openvpn.sh") 
+#   user_data = file("./scripts/install_openvpn.sh") 
   
-  lifecycle {
-    create_before_destroy = true
-  }
-}
+#   lifecycle {
+#     create_before_destroy = true
+#   }
+# }
 
 
-resource "aws_security_group" "openvpn_sg" {
-  name        = "openvpn-sg"
-  description = "Allow OpenVPN and SSH"
-  vpc_id      = module.vpc.vpc_id
+# resource "aws_security_group" "openvpn_sg" {
+#   name        = "openvpn-sg"
+#   description = "Allow OpenVPN and SSH"
+#   vpc_id      = module.vpc.vpc_id
 
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+#   ingress {
+#     from_port   = 22
+#     to_port     = 22
+#     protocol    = "tcp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
 
-  ingress {
-    from_port   = 1194
-    to_port     = 1194
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+#   ingress {
+#     from_port   = 1194
+#     to_port     = 1194
+#     protocol    = "udp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
