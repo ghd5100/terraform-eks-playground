@@ -78,13 +78,13 @@ EOT
 }
 
 
-data "external" "eks_instance_ids" {
-  program = ["powershell", "-File", "${path.module}/scripts/get_instance_ids.ps1"]
-}
-
-locals {
-  eks_instance_ids = split(",", data.external.eks_instance_ids.result.ids)
-}
+# data "external" "eks_instance_ids" {
+#  program = ["powershell", "-File", "${path.module}/scripts/get_instance_ids.ps1"]
+#}
+#
+#locals {
+#  eks_instance_ids = split(",", data.external.eks_instance_ids.result.ids)
+#}
 
 
 
