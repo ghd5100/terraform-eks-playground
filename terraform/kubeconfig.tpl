@@ -3,7 +3,9 @@ clusters:
 - cluster:
     certificate-authority-data: ${ca_data}
     server: ${endpoint}
-  name: ${cluster_name}
+    # server: https://127.0.0.1:8443
+    name: ${cluster_name}
+    # name: arn:aws:eks:ap-northeast-2:116981781177:cluster/my-eks-cluster
 contexts:
 - context:
     cluster: ${cluster_name}

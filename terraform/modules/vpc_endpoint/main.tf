@@ -18,6 +18,7 @@ resource "aws_security_group" "vpc_endpoint_sg" {
     }
 
   ingress {
+  description      = "Allow HTTPS from VPN subnet"
   from_port   = 443
   to_port     = 443
   protocol    = "tcp"
@@ -52,5 +53,5 @@ resource "aws_vpc_endpoint" "ssm_endpoints" {
   vpc_endpoint_type = "Interface"
   subnet_ids        = var.subnet_ids
   security_group_ids = [aws_security_group.vpc_endpoint_sg.id]
-  private_dns_enabled = false #false
+  private_dns_enabled = true #false
 }

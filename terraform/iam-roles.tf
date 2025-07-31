@@ -61,3 +61,36 @@ resource "aws_iam_instance_profile" "eks_instance_profile" {
 }
 
 
+resource "aws_iam_policy" "ssm_portforward_policy" {
+  name        = "SSMPortForwardPolicy"
+  description = "Allow SSM Session and Port Forwarding"
+  policy      = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ssm:StartSession",
+          "ssm:DescribeSessions",
+          "ssm:GetSession",
+          "ssm:TerminateSession",
+          "ssm:ResumeSession",
+          "ssm:StartPortForwardingSession"
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "ec2:DescribeInstances"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_portforward_attach" {
+  role       = aws_iam_role.ssm_automation_role.name
+  policy_arn = aws_iam_policy.ssm_portforward_policy.arn
+}

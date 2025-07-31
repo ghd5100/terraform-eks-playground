@@ -56,16 +56,79 @@ module "ssm_endpoints" {
 
 resource "aws_launch_template" "eks_node_lt" {
   name_prefix   = "eks-node-lt-"
-  image_id      = "ami-0f8d552e06067b477"  # 직접 넣기
+  #image_id      = "ami-0f8d552e06067b477"  # 직접 넣기
+  image_id = data.aws_ssm_parameter.eks_worker_ami.value
   instance_type = "t3.medium"
 
   user_data = base64encode(<<EOT
 #!/bin/bash
-yum install -y amazon-ssm-agent
+set -e
+
+# 패키지 업데이트
+apt-get update -y
+
+# 필요한 도구 설치
+apt-get install -y curl unzip jq apt-transport-https ca-certificates gnupg lsb-release software-properties-common
+
+# SSM Agent 설치 (Ubuntu)
+snap install amazon-ssm-agent --classic
 systemctl enable amazon-ssm-agent
 systemctl start amazon-ssm-agent
+
+# kubectl 설치
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+mv kubectl /usr/local/bin/
+
+# AWS CLI 설치
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
+# kubeconfig 설정
+mkdir -p /home/ubuntu/.kube
+aws eks update-kubeconfig --region ap-northeast-2 --name my-eks-cluster --kubeconfig /home/ubuntu/.kube/config
+chown -R ubuntu:ubuntu /home/ubuntu/.kube
+
+# 확인
+kubectl version --client
+
 EOT
   )
+
+
+# #!/bin/bash
+# set -e
+
+# # 패키지 업데이트
+# apt-get update -y
+
+# # 필요한 도구 설치
+# apt-get install -y curl unzip jq apt-transport-https ca-certificates gnupg lsb-release software-properties-common
+
+# # SSM Agent 설치 (Ubuntu)
+# snap install amazon-ssm-agent --classic
+# systemctl enable amazon-ssm-agent
+# systemctl start amazon-ssm-agent
+
+# # kubectl 설치
+# curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+# chmod +x kubectl
+# mv kubectl /usr/local/bin/
+
+# # AWS CLI 설치
+# curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+# unzip awscliv2.zip
+# sudo ./aws/install
+
+# # kubeconfig 설정
+# mkdir -p /home/ubuntu/.kube
+# aws eks update-kubeconfig --region ap-northeast-2 --name my-eks-cluster --kubeconfig /home/ubuntu/.kube/config
+# chown -R ubuntu:ubuntu /home/ubuntu/.kube
+
+# # 확인
+# kubectl version --client
+
 
   iam_instance_profile {
     name = aws_iam_instance_profile.eks_instance_profile.name
@@ -89,37 +152,16 @@ EOT
 #  eks_instance_ids = split(",", data.external.eks_instance_ids.result.ids)
 # }
 
-locals {
-  eks_instance_ids = data.aws_instances.eks_nodes.ids
-}
 
-resource "null_resource" "start_ssm_automation" {
-  count = length(local.eks_instance_ids)
+#============================
 
-  provisioner "local-exec" {
-    command = "aws ssm start-automation-execution --document-name MyAutomationDocument --parameters AutomationAssumeRole=arn:aws:iam::116981781177:role/SSMAutomationRole,InstanceId=${local.eks_instance_ids[count.index]} --region ap-northeast-2"
-  }
 
-  depends_on = [
-    aws_ssm_document.my_automation_doc,
-    aws_iam_role_policy_attachment.ssm_automation_role_attachment,
-    module.eks
-  ]
-}
 
 # resource "null_resource" "start_ssm_automation" {
-#   count = 1
+#   count = length(local.eks_instance_ids)
 
-#   # provisioner "local-exec" {
-#   #   command = <<EOT
-#   #     for instance_id in $(aws ec2 describe-instances --filters "Name=tag:Name,Values=default" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text); do
-#   #       aws ssm start-automation-execution --document-name MyAutomationDocument --parameters AutomationAssumeRole=arn:aws:iam::116981781177:role/SSMAutomationRole,InstanceId=$instance_id --region ap-northeast-2
-#   #     done
-#   #   EOT
-#   # }
-
-#     provisioner "local-exec" {
-#     command = "bash ${path.module}/scripts/start_ssm_automation.sh"
+#   provisioner "local-exec" {
+#     command = "aws ssm start-automation-execution --document-name MyAutomationDocument --parameters AutomationAssumeRole=arn:aws:iam::116981781177:role/SSMAutomationRole,InstanceId=${local.eks_instance_ids[count.index]} --region ap-northeast-2"
 #   }
 
 #   depends_on = [
@@ -128,6 +170,35 @@ resource "null_resource" "start_ssm_automation" {
 #     module.eks
 #   ]
 # }
+
+#===========================
+
+locals {
+  eks_instance_ids = data.aws_instances.eks_nodes.ids
+}
+
+
+resource "null_resource" "start_ssm_automation" {
+  count = 1
+
+  provisioner "local-exec" {
+    command = <<EOT
+      for instance_id in $(aws ec2 describe-instances --filters "Name=tag:Name,Values=default" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text); do
+        aws ssm start-automation-execution --document-name MyAutomationDocument --parameters AutomationAssumeRole=arn:aws:iam::116981781177:role/SSMAutomationRole,InstanceId=$instance_id --region ap-northeast-2
+      done
+    EOT
+  }
+
+    provisioner "local-exec" {
+    command = "bash ${path.module}/scripts/start_ssm_automation.sh"
+  }
+
+  depends_on = [
+    aws_ssm_document.my_automation_doc,
+    aws_iam_role_policy_attachment.ssm_automation_role_attachment,
+    module.eks
+  ]
+}
 
 
 module "eks" {
@@ -146,8 +217,6 @@ module "eks" {
       min_size       = 1
       instance_types = ["t3.small"]
 
-    # ami_type = "CUSTOM"
-
     launch_template = {
         id      = aws_launch_template.eks_node_lt.id
         version = "$Latest"
@@ -156,6 +225,9 @@ module "eks" {
     iam_role_arn = aws_iam_role.eks_node_role.arn
     iam_role_additional_policies = {
       ssm = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      eks_worker_node                     = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+      eks_cni                            = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+      ec2_container_registry_read_only   = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
       }
 
     tags = {
@@ -287,6 +359,16 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
+
+
+data "aws_ssm_parameter" "eks_worker_ami" {
+  name = "/aws/service/eks/optimized-ami/1.29/amazon-linux-2/recommended/image_id" # EKS 버전에 따라 수정
+}
+
+output "eks_ami_id" {
+  value = data.aws_ssm_parameter.eks_worker_ami.value
+  sensitive = true
+}
 # resource "aws_instance" "openvpn_ec2" {
 #   ami           = "ami-05dbfca09fc71c807"                             # data.aws_ami.amazon_linux_2.id
 #   instance_type = "t3.micro"
